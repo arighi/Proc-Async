@@ -23,6 +23,7 @@ use Proc::Async::Config;
 use Proc::Daemon;
 use Config;
 
+use constant STDIN_FILE => '___proc_async_stdin___';
 use constant STDOUT_FILE => '___proc_async_stdout___';
 use constant STDERR_FILE => '___proc_async_stderr___';
 use constant CONFIG_FILE => '___proc_async_status.cfg';
@@ -40,12 +41,14 @@ use constant {
 use constant {
     ALLOW_SHELL => 'ALLOW_SHELL',
     TIMEOUT     => 'TIMEOUT',
+    CHILD_STDIN => 'CHILD_STDIN',
 };
 
 #
 my $KNOWN_OPTIONS = {
     ALLOW_SHELL() => 1,
     TIMEOUT() => 1,
+    CHILD_STDIN() => '',
 };
 
 #-----------------------------------------------------------------
@@ -65,6 +68,7 @@ sub start {
     croak ("START: Undefined external process.")
         unless @_ > 0;
     my ($args, $options) = _process_start_args (@_);
+
     _check_options ($options);
 
     # create a job ID and a job directory
@@ -74,11 +78,16 @@ sub start {
     # create configuration file
     my ($cfg, $cfgfile) = _start_config ($jobid, $args, $options);
 
+    if (defined($options->{CHILD_STDIN})) {
+        $class->stdin($jobid, $options->{CHILD_STDIN});
+    }
+
     # demonize itself
     my $daemon = Proc::Daemon->new(
         work_dir     => $dir,
         child_STDOUT => File::Spec->catfile ($dir, STDOUT_FILE),
         child_STDERR => File::Spec->catfile ($dir, STDERR_FILE),
+        child_STDIN  => File::Spec->catfile ($dir, STDIN_FILE),
         );
     my $daemon_pid = $daemon->Init();
     if ($daemon_pid) {
@@ -149,18 +158,12 @@ sub start {
         #
         # --- this branch is executed in the just started child process
         #
-
-        # replace itself by an external process
-        if ($options->{ ALLOW_SHELL() } or @$args > 1) {
-            # this allows to execute things such as: 'date | wc'
-            exec (@$args) or
-                croak "Cannot execute the external process: " . _join_args ($args) . "\n";
-        } else {
-            # this is always save against interpreting $args by a shell
-            exec { $args->[0] } @$args or
-                croak "Cannot execute (using an indirect object) the external process: " . _join_args ($args) . "\n";
+        open(CHILD, "| " . join(" ", @$args));
+        if (defined($options->{CHILD_STDIN})) {
+            print CHILD $options->{CHILD_STDIN};
         }
-
+        close(CHILD);
+        exit();
     } else {
         #
         # --- this branch is executed only when there is an error in the forking
@@ -352,6 +355,15 @@ sub stdout {
         $content = read_file ($file);
     };
     return $content;
+}
+
+sub stdin {
+    my ($class, $jobid, $content) = @_;
+    my $dir = _id2dir ($jobid);
+    my $file = File::Spec->catfile ($dir, STDIN_FILE);
+    eval {
+        write_file($file, $content);
+    };
 }
 
 #-----------------------------------------------------------------
@@ -751,6 +763,7 @@ paragraph) and empty sub-directories.
 There are also files with the special names, as defined by the
 following constants:
 
+   use constant STDIN_FILE => '___proc_async_stdin___';
    use constant STDOUT_FILE => '___proc_async_stdout___';
    use constant STDERR_FILE => '___proc_async_stderr___';
    use constant CONFIG_FILE => '___proc_async_status.cfg';
