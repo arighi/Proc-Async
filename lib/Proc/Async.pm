@@ -163,7 +163,7 @@ sub start {
             print CHILD $options->{CHILD_STDIN};
         }
         close(CHILD);
-        exit();
+        exit($? >> 8);
     } else {
         #
         # --- this branch is executed only when there is an error in the forking
