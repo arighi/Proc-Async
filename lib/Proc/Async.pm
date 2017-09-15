@@ -42,6 +42,7 @@ use constant {
     ALLOW_SHELL => 'ALLOW_SHELL',
     TIMEOUT     => 'TIMEOUT',
     CHILD_STDIN => 'CHILD_STDIN',
+    DETACHED    => 'DETACHED',
 };
 
 #
@@ -49,6 +50,7 @@ my $KNOWN_OPTIONS = {
     ALLOW_SHELL() => 1,
     TIMEOUT() => 1,
     CHILD_STDIN() => '',
+    DETACHED() => 0,
 };
 
 #-----------------------------------------------------------------
@@ -119,6 +121,12 @@ sub start {
         # TBD: if TIMEOUT then use alarm and non-blocking waitpid
         my $reaped_pid = waitpid ($pid, 0);
         my $reaped_status = $?;
+
+        if (defined($options->{DETACHED}) and ($options->{DETACHED} == 1)) {
+            chdir('/');
+            $class->clean($jobid);
+            exit(0);
+        }
 
         if ($reaped_status == -1) {
             update_status ($cfg,
@@ -388,6 +396,7 @@ sub stderr {
 sub clean {
     my ($class, $jobid) = @_;
     my $dir = _id2dir ($jobid);
+    print "jobid=$jobid\n";
     my $file_count = remove_tree ($dir);  #, {verbose => 1});
     return $file_count;
 }
