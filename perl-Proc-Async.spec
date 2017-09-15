@@ -1,6 +1,6 @@
 Name:           perl-Proc-Async
 Version:        1.0.0
-Release:        2
+Release:        3
 Summary:        Running and monitoring processes asynchronously
 License:        GPL+ or Artistic
 Group:          Development/Libraries
@@ -57,6 +57,9 @@ install -m 0644 lib/Proc/Async/Config.pm  %{buildroot}/usr/share/perl5/Proc/Asyn
 %attr(644, -, -) /usr/share/perl5/Proc/Async/Config.pm
 
 %changelog
+* Fri Sep 15 2017 Andrea Righi <andrea@betterservers.com> 1.0.0-3
+- Introduce option DETACHED
+
 * Tue Nov 29 2016 Andrea Righi <andrea@betterservers.com> 1.0.0-2
 - Properly get exit code from the executed child process
 
