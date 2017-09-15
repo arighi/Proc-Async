@@ -396,7 +396,6 @@ sub stderr {
 sub clean {
     my ($class, $jobid) = @_;
     my $dir = _id2dir ($jobid);
-    print "jobid=$jobid\n";
     my $file_count = remove_tree ($dir);  #, {verbose => 1});
     return $file_count;
 }
